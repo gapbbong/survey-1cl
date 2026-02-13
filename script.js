@@ -470,8 +470,8 @@ surveyForm.addEventListener("submit", async (e) => {
     const phoneRegex = /^010-\d{4}-\d{4}$/;
     const phoneInputs = [
         { el: surveyForm.elements['학생폰'], name: "학생 연락처" },
-        { el: surveyForm.elements['부(연락처)'], name: "부 연락처" },
-        { el: surveyForm.elements['모(연락처)'], name: "모 연락처" }
+        { el: surveyForm.elements['주보호자연락처'], name: "주보호자 연락처" },
+        { el: surveyForm.elements['보조보호자연락처'], name: "보조보호자 연락처" }
     ];
 
     for (const p of phoneInputs) {

@@ -66,32 +66,53 @@
                     <h3>👨‍👩‍👧 가족 관계</h3>
                     <div class="grid-row">
                         <div class="input-item">
-                            <label>부 성명 (비상연락망)</label>
-                            <input type="text" name="부성명" required>
+                            <label>주보호자 성명 (비상연락망)</label>
+                            <input type="text" name="주보호자성명" required>
                         </div>
                         <div class="input-item">
-                            <label>
-                                부 연락처
-                                <button type="button" class="btn-contact" data-target="부(연락처)">🔍</button>
-                            </label>
-                            <div class="flex-row">
-                                <input type="tel" name="부(연락처)" required>
-                            </div>
+                            <label>학생과의 관계 (주보호자)</label>
+                            <select name="주보호자관계" required>
+                                <option value="">-- 선택 --</option>
+                                <option value="부">부</option>
+                                <option value="모">모</option>
+                                <option value="조부모">조부모</option>
+                                <option value="기타">기타(친척/보호자)</option>
+                            </select>
                         </div>
                     </div>
-                    <div class="grid-row">
-                        <div class="input-item">
-                            <label>모 성명 (비상연락망)</label>
-                            <input type="text" name="모성명" required>
+                    <div class="input-item">
+                        <label>
+                            주보호자 연락처
+                            <button type="button" class="btn-contact" data-target="주보호자연락처">🔍</button>
+                        </label>
+                        <div class="flex-row">
+                            <input type="tel" name="주보호자연락처" required>
                         </div>
-                        <div class="input-item">
-                            <label>
-                                모 연락처
-                                <button type="button" class="btn-contact" data-target="모(연락처)">🔍</button>
-                            </label>
-                            <div class="flex-row">
-                                <input type="tel" name="모(연락처)" required>
-                            </div>
+                    </div>
+
+                    <div class="grid-row" style="margin-top: 20px; border-top: 1px dashed #eee; padding-top: 20px;">
+                        <div class="input-item" style="margin-top: 15px;">
+                            <label>보조보호자 성명 (비상연락망)</label>
+                            <input type="text" name="보조보호자성명" required>
+                        </div>
+                        <div class="input-item" style="margin-top: 15px;">
+                            <label>학생과의 관계 (보조보호자)</label>
+                            <select name="보조보호자관계" required>
+                                <option value="">-- 선택 --</option>
+                                <option value="부">부</option>
+                                <option value="모">모</option>
+                                <option value="조부모">조부모</option>
+                                <option value="기타">기타(친척/보호자)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="input-item">
+                        <label>
+                            보조보호자 연락처
+                            <button type="button" class="btn-contact" data-target="보조보호자연락처">🔍</button>
+                        </label>
+                        <div class="flex-row">
+                            <input type="tel" name="보조보호자연락처" required>
                         </div>
                     </div>
                     <div class="input-item">
@@ -141,8 +162,8 @@
                     </div>
                     <div class="grid-row">
                         <div class="input-item">
-                            <label>어머니와의 친밀도</label>
-                            <select name="어머니친밀도" required>
+                            <label>주보호자와의 친밀도</label>
+                            <select name="주보호자친밀도" required>
                                 <option value="">-- 선택 --</option>
                                 <option value="5">⭐⭐⭐⭐⭐ (매우 좋음)</option>
                                 <option value="4">⭐⭐⭐⭐ (좋은 편)</option>
@@ -153,8 +174,8 @@
                             </select>
                         </div>
                         <div class="input-item">
-                            <label>아버지와의 친밀도</label>
-                            <select name="아버지친밀도" required>
+                            <label>보조보호자와의 친밀도</label>
+                            <select name="보조보호자친밀도" required>
                                 <option value="">-- 선택 --</option>
                                 <option value="5">⭐⭐⭐⭐⭐ (매우 좋음)</option>
                                 <option value="4">⭐⭐⭐⭐ (좋은 편)</option>
