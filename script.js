@@ -1,7 +1,7 @@
 // ✅ Student Survey App JS (v3)
 
 // [중요] 실제 서비스 시에는 선생님의 GAS SCRIPT_URL로 교체 완료해야 함
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzzK6YSbk7I42HruE1JVmetKj0czQQZ82H-ZTlm0gX2Aa4FI4n1ndn87ooO-t0jxPyx/exec";
+const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyfadmRNyOpRww3m13PVnx_E_6ft9gzrqleOx2q_8X9WXFpom31vYpgjzZg9MK01hcZ3Q/exec";
 
 let currentStudentNum = null; // 초기화
 
@@ -21,6 +21,12 @@ const btnContacts = document.querySelectorAll(".btn-contact"); // 연락처 검�
 const surveyForm = document.getElementById("survey-form");
 const btnSubmit = document.getElementById("btn-submit"); // 제출 버튼
 const privacyConsent = document.getElementById("privacy-consent"); // 동의 체크박스
+
+// [추가] 비밀번호 관련 요소
+const pwVerifyGroup = document.getElementById("pw-verify-group");
+const inputPw = document.getElementById("student-pw");
+const setupPw = document.getElementById("setup-pw");
+const setupPwConfirm = document.getElementById("setup-pw-confirm");
 
 // 로딩 토글
 function toggleLoading(show) {
@@ -114,17 +120,56 @@ btnVerify.addEventListener("click", async () => {
     const num = inputNum.value.trim();
     if (!num) return alert("학번을 입력해주세요.");
 
+    const pw = inputPw.value.trim();
+
+    // 만약 이미 조회 후 비밀번호 입력창이 뜬 상태라면, 비밀번호를 포함해 다시 조회(검증)
+    const isPwStage = !pwVerifyGroup.classList.contains("hidden");
+
     toggleLoading(true);
     try {
-        const response = await fetch(`${SCRIPT_URL}?action=verifyStudent&num=${num}`);
+        let url = `${SCRIPT_URL}?action=verifyStudent&num=${num}`;
+        if (isPwStage && pw) {
+            url += `&pw=${encodeURIComponent(pw)}`;
+        }
+
+        const response = await fetch(url);
         const data = await response.json();
 
         if (data.success) {
+            if (data.hasPassword) {
+                if (!isPwStage) {
+                    // 1단계: 비밀번호가 있음 -> 입력창 보여주기
+                    pwVerifyGroup.classList.remove("hidden");
+                    btnVerify.textContent = "비밀번호 확인";
+                    alert("이전에 설정한 비밀번호를 입력해주세요.");
+                    return;
+                } else {
+                    // 2단계: 비밀번호 검증 결과 확인
+                    if (!data.isPasswordCorrect) {
+                        alert("비밀번호가 올바르지 않습니다.");
+                        return;
+                    }
+                }
+            }
+
+            // 본인 확인 성공 (비밀번호가 없거나, 비밀번호가 맞거나)
             displayName.textContent = data.name;
             verifyResult.classList.remove("hidden");
             currentStudentNum = num;
+
+            // 비밀번호가 이미 있으면 설문지의 '비밀번호 설정' 칸은 현재 입력한 값으로 채우고 숨기거나 안내
+            if (data.hasPassword && setupPw) {
+                setupPw.value = pw;
+                setupPwConfirm.value = pw;
+                // 이미 설정된 비밀번호라고 안내 (선택사항)
+                const pwSection = setupPw.closest(".form-section");
+                if (pwSection) {
+                    const h3 = pwSection.querySelector("h3");
+                    if (h3) h3.textContent += " (인증됨)";
+                }
+            }
         } else {
-            alert("입력하신 학번의 학생을 찾을 수 없습니다.");
+            alert(data.message || "입력하신 학번의 학생을 찾을 수 없습니다.");
             verifyResult.classList.add("hidden");
         }
     } catch (err) {
@@ -228,6 +273,34 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    // [추가] 형제 관계 select 업데이트 로직
+    const sMale = document.getElementById("sibling-male");
+    const sFemale = document.getElementById("sibling-female");
+    const sRank = document.getElementById("sibling-rank");
+    const hSibling = document.getElementById("hidden-sibling");
+
+    function updateSiblingHidden() {
+        if (!sMale || !sFemale || !sRank || !hSibling) return;
+
+        const maleVal = sMale.value;
+        const femaleVal = sFemale.value;
+        const rankVal = sRank.value;
+
+        if (rankVal === "외동") {
+            hSibling.value = "외동";
+            // 외동 선택 시 남/녀 수는 자동으로 1남 0녀로 고정하는 것이 논리적이나, 사용자 편의를 위해 일단 값만 반영
+        } else {
+            hSibling.value = `${maleVal} ${femaleVal} 중 ${rankVal}`;
+        }
+    }
+
+    [sMale, sFemale, sRank].forEach(el => {
+        if (el) el.addEventListener("change", updateSiblingHidden);
+    });
+
+    // 초기 실행
+    updateSiblingHidden();
+
     const btnContacts = document.querySelectorAll(".btn-contact");
     btnContacts.forEach(btn => {
         // 지원하지 않는 브라우저면 버튼 숨기기
@@ -301,6 +374,12 @@ function updateSubmitButton() {
 
     if (!isConsentChecked) {
         missingNames.push("개인정보 수집 및 이용 동의");
+    }
+
+    // 비밀번호 일치 검사
+    if (setupPw && setupPwConfirm && setupPw.value !== setupPwConfirm.value) {
+        allFilled = false; // 일치하지 않으면 제출 불가 처리
+        missingNames.push("비밀번호 일치 확인");
     }
 
     // 메시지 박스 업데이트
@@ -544,10 +623,15 @@ surveyForm.addEventListener("submit", async (e) => {
         }
     });
 
+    // [추가] 비밀번호 확인 (setupPw가 비어있으면 inputPw 사용 - 기존 학생 대응)
+    if (!surveyData['비밀번호'] && inputPw.value) {
+        surveyData['비밀번호'] = inputPw.value;
+    }
+
     // [수정] 상세주소 합치기
     if (surveyData['상세주소']) {
         surveyData['집주소'] = surveyData['집주소'] + " " + surveyData['상세주소'];
-        delete surveyData['상세주소']; // 구글시트에는 '상세주소' 컬럼이 없으므로 제거 (또는 합쳐서 보냄)
+        // delete surveyData['상세주소']; // 상세주소 컬럼이 시트에 있다면 삭제하지 않고 같이 보냄
     }
 
     // POST 요청용 FormData

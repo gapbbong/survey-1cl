@@ -16,7 +16,7 @@
     <div class="container">
         <header>
             <h1>우리 반 친구들을 위한 소중한 기록 💖</h1>
-            <p>여러분을 더 잘 이해하고, 한 명 한 명에게 꼭 맞는<br>따뜻한 지도를 하기 위해 선생님이 준비한 공간입니다. (v19)</p>
+            <p>여러분을 더 잘 이해하고, 한 명 한 명에게 꼭 맞는<br>따뜻한 지도를 하기 위해 선생님이 준비한 공간입니다. (v19.1)</p>
         </header>
 
         <!-- 1단계: 본인 확인 -->
@@ -28,18 +28,30 @@
                     <button id="btn-verify" class="primary-btn">조회</button>
                 </div>
             </div>
+
+            <!-- [추가] 비밀번호 입력 (조회 후 노출) -->
+            <div id="pw-verify-group" class="input-group hidden" style="margin-top: 15px;">
+                <label for="student-pw">비밀번호 확인</label>
+                <input type="password" id="student-pw" placeholder="설정했던 비밀번호를 입력" inputmode="numeric">
+                <small class="hint-text">처음 작성하는 학생은 자동으로 넘어갑니다.</small>
+            </div>
+
             <div id="verify-result" class="hidden">
                 <p class="welcome-msg">안녕하세요, <span id="display-name" class="highlight"></span>님!</p>
                 <div class="fraud-warning-mini">
                     ⚠️ 타인의 학번 도용 및 허위 입력은 학교 규정에 따라 불이익을 받을 수 있습니다.
                 </div>
                 <p>본인이 맞으면 아래 버튼을 눌러주세요.</p>
-                <button id="btn-start" class="success-btn">본인 확인 완료</button>
+                <button id="btn-start" class="success-btn">본인 확인 완료, 설문 시작</button>
             </div>
         </section>
 
         <!-- 2단계: 설문 입력 -->
         <section id="step-survey" class="card hidden">
+            <div class="sincerity-warning">
+                ⚠️ 무성의한 답변이나 장난식의 입력은 종례후에 남아서 상담으로 이어질 수 있습니다.<br>
+                본인을 위한 소중한 기록인 만큼 성실하게 답변해 주기 바랍니다.
+            </div>
             <form id="survey-form">
                 <div class="form-section">
                     <h3>📱 연락처 및 주소</h3>
@@ -48,13 +60,13 @@
                         <input type="tel" name="학생폰" placeholder="010-0000-0000" required>
                     </div>
                     <div class="input-item">
-                        <label>집주소</label>
-                        <div class="flex-row" style="margin-bottom: 5px;">
-                            <input type="text" name="우편번호" id="zip-code" placeholder="우편번호" style="width: 120px;"
-                                readonly>
+                        <div class="flex-row" style="align-items: center; margin-bottom: 8px; gap: 8px;">
+                            <label style="margin-bottom: 0;">집주소</label>
                             <button type="button" class="primary-btn" id="btn-search-addr"
-                                style="width: 80px;">검색</button>
+                                style="width: auto; padding: 4px 10px; font-size: 0.8rem;">주소 검색 🔍</button>
                         </div>
+                        <input type="text" name="우편번호" id="zip-code" placeholder="우편번호"
+                            style="width: 100px; margin-bottom: 5px;" readonly>
                         <input type="text" name="집주소" id="address-input" placeholder="주소 (검색 버튼을 눌러주세요)" required
                             readonly>
                         <input type="text" name="상세주소" id="detail-address-input" placeholder="상세주소 (예: 101동 1201호)"
@@ -116,9 +128,35 @@
                         </div>
                     </div>
                     <div class="input-item">
-                        <label>형제 관계</label>
-                        <input type="text" name="형제" placeholder="예: 2남 1녀 중 첫째, 외동 등" required>
-                        <small class="hint-text">(몇남몇녀 중 몇째인지 구체적으로 적어주세요)</small>
+                        <label>형제 관계 (본인 포함 총 인원)</label>
+                        <div class="flex-row" style="gap: 5px; align-items: center;">
+                            <select id="sibling-male" style="flex: 1; padding: 10px 5px;">
+                                <option value="0남">0남</option>
+                                <option value="1남">1남</option>
+                                <option value="2남">2남</option>
+                                <option value="3남">3남</option>
+                                <option value="4남">4남 이상</option>
+                            </select>
+                            <select id="sibling-female" style="flex: 1; padding: 10px 5px;">
+                                <option value="0녀">0녀</option>
+                                <option value="1녀">1녀</option>
+                                <option value="2녀">2녀</option>
+                                <option value="3녀">3녀</option>
+                                <option value="4녀">4녀 이상</option>
+                            </select>
+                            <span style="font-size: 0.9rem; font-weight: 600;">중</span>
+                            <select id="sibling-rank" style="flex: 1; padding: 10px 5px;">
+                                <option value="첫째">첫째</option>
+                                <option value="둘째">둘째</option>
+                                <option value="셋째">셋째</option>
+                                <option value="넷째">넷째</option>
+                                <option value="다섯째 이상">다섯째 이상</option>
+                                <option value="외동">외동</option>
+                            </select>
+                            <span style="font-size: 0.9rem; font-weight: 600;">째</span>
+                        </div>
+                        <input type="hidden" name="형제" id="hidden-sibling" value="1남 0녀 중 첫째">
+                        <small class="hint-text">(본인을 포함하여 총 몇 남 몇 녀 중 몇째인지 선택해 주세요)</small>
                     </div>
                     <div class="input-item">
                         <label>학교 소식을 가장 먼저 전해드릴 분 (주 연락처)</label>
@@ -190,9 +228,9 @@
                         <small class="hint-text">(위 정보는 선생님이 학생 상담 및 지도를 위해서만 소중히 참고하겠습니다 💖)</small>
                     </div>
                     <div class="input-item">
-                        <label>함께 지내는 반려동물 (선택)</label>
-                        <input type="text" name="반려동물" placeholder="예: 강아지(초코), 고양이(나비)">
-                        <small class="hint-text">(키우는 동물의 종류와 이름을 함께 적어주면 선생님이 더 잘 기억할 수 있어요! 🐾)</small>
+                        <label>함께 지내는 반려동물 (종류와 이름을 함께! 🐶)</label>
+                        <input type="text" name="반려동물" placeholder="예: 강아지(초코), 고양이(나비), 없음">
+                        <small class="hint-text">(강아지, 고양이 등 '종류'를 이름과 함께 꼭 적어주세요. 없으면 '없음'이라고 써주세요! 🐾)</small>
                     </div>
                 </div>
 
@@ -213,8 +251,11 @@
                             <small class="hint-text">('학교'는 제외하고 'OO중' 형식으로만 입력해주세요)</small>
                         </div>
                         <div class="input-item">
-                            <label>중학교 성적</label>
-                            <input type="text" name="중학교성적" placeholder="예: 상위 10%" required>
+                            <label>중학교 성적 (정확히 모르면 대략적으로)</label>
+                            <div class="flex-row" style="align-items: center; gap: 8px;">
+                                <input type="text" name="중학교성적" required>
+                                <span style="font-size: 1.1rem; font-weight: 600;">%</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -242,9 +283,15 @@
 
                 <div class="form-section">
                     <h3>🎮 관심사와 에너지</h3>
-                    <div class="input-item">
-                        <label>취미 및 특기</label>
-                        <input type="text" name="취미특기" placeholder="예: 축구, 영상 편집, 게임" required>
+                    <div class="grid-row">
+                        <div class="input-item">
+                            <label>취미</label>
+                            <input type="text" name="취미" placeholder="예: 축구, 음악 감상" required>
+                        </div>
+                        <div class="input-item">
+                            <label>특기</label>
+                            <input type="text" name="특기" placeholder="예: 영상 편집, 코딩" required>
+                        </div>
                     </div>
                     <div class="grid-row">
                         <div class="input-item">
@@ -429,6 +476,23 @@
                         <textarea name="기타메시지" rows="2"
                             placeholder="선생님이 꼭 알았으면 하는 내용이나 부탁하고 싶은 점이 있다면 자유롭게 적어주세요."></textarea>
                     </div>
+                </div>
+
+                <div class="form-section">
+                    <h3>🔐 설문 수정 비밀번호 설정</h3>
+                    <div class="grid-row">
+                        <div class="input-item">
+                            <label>비밀번호 설정 (숫자 4자리 권장)</label>
+                            <input type="password" name="비밀번호" id="setup-pw" placeholder="비밀번호 입력" required
+                                inputmode="numeric">
+                        </div>
+                        <div class="input-item">
+                            <label>비밀번호 확인</label>
+                            <input type="password" id="setup-pw-confirm" placeholder="한 번 더 입력" required
+                                inputmode="numeric">
+                        </div>
+                    </div>
+                    <small class="hint-text">입력하신 비밀번호는 추후 설문 내용을 수정할 때 본인 확인용으로 사용됩니다.</small>
                 </div>
 
                 <div class="form-section privacy-section">
