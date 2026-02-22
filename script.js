@@ -626,21 +626,6 @@ surveyForm.addEventListener("submit", async (e) => {
         }
     }
 
-    // 최종 확인용 데이터 추출
-    const sPhone = surveyForm.elements['학생폰'].value;
-    const addr = surveyForm.elements['집주소'].value;
-    const primaryContact = surveyForm.elements['주연락대상'].value || "미지정";
-
-    const confirmMsg = `입력하신 정보를 최종 확인해주세요.\n\n` +
-        `📱 학생번호: ${sPhone}\n` +
-        `🏠 주소: ${addr}\n` +
-        `📞 주요연락: ${primaryContact}\n\n` +
-        `이 정보가 맞으면 확인을 눌러주세요.`;
-
-    if (!confirm(confirmMsg)) return;
-
-    toggleLoading(true);
-
     const formData = new FormData(surveyForm);
     const surveyData = {};
     formData.forEach((value, key) => {
@@ -666,6 +651,27 @@ surveyForm.addEventListener("submit", async (e) => {
         surveyData['집주소'] = surveyData['집주소'] + " " + surveyData['상세주소'];
         // delete surveyData['상세주소']; // 상세주소 컬럼이 시트에 있다면 삭제하지 않고 같이 보냄
     }
+
+    // 최종 확인용 메시지 동적 생성
+    let confirmMsg = `입력하신 정보를 최종 확인해주세요.\n\n`;
+
+    // 주요 항목만 추려서 보여주거나, 너무 긴 항목은 잘라서 표시
+    const keyItemsToShow = ['학생폰', '집주소', '주보호자관계', '주보호자연락처', '형제', '주연락대상', '출신중', '나의꿈', 'MBTI', '혈액형'];
+
+    for (const key of keyItemsToShow) {
+        if (surveyData[key]) {
+            // 주소 등 너무 길면 말줄임
+            let val = surveyData[key];
+            if (val.length > 25) val = val.substring(0, 25) + "...";
+            confirmMsg += `▪️ ${key}: ${val}\n`;
+        }
+    }
+
+    confirmMsg += `\n위 내용을 포함하여 총 ${Object.keys(surveyData).length}개의 항목이 저장됩니다.\n내용이 맞으면 [확인]을 눌러 제출해주세요.`;
+
+    if (!confirm(confirmMsg)) return;
+
+    toggleLoading(true);
 
     // [추가] 학적 자동 설정
     surveyData['학적'] = "재학";
