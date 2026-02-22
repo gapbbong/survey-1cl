@@ -655,25 +655,47 @@ surveyForm.addEventListener("submit", async (e) => {
     // 최종 확인용 메시지 동적 생성
     let confirmMsg = `입력하신 정보를 최종 확인해주세요.\n\n`;
 
-    // 주요 항목만 추려서 보여주거나, 너무 긴 항목은 잘라서 표시
-    const keyItemsToShow = ['학생폰', '집주소', '주보호자관계', '주보호자연락처', '형제', '주연락대상', '출신중', '나의꿈', 'MBTI', '혈액형'];
-
+    // 핵심 항목은 상단에 고정
+    const keyItemsToShow = ['학생폰', '집주소', '주보호자관계', '주보호자연락처'];
     for (const key of keyItemsToShow) {
         if (surveyData[key]) {
-            // 주소 등 너무 길면 말줄임
             let val = surveyData[key];
             if (val.length > 25) val = val.substring(0, 25) + "...";
             confirmMsg += `▪️ ${key}: ${val}\n`;
         }
     }
 
-    confirmMsg += `\n위 내용을 포함하여 총 ${Object.keys(surveyData).length}개의 항목이 저장됩니다.\n내용이 맞으면 [확인]을 눌러 제출해주세요.`;
+    confirmMsg += `\n[전체 입력 내용]\n`;
+
+    // 나머지 모든 입력 항목 나열 (값이 있는 것만, 비밀번호 제외)
+    for (const [key, value] of Object.entries(surveyData)) {
+        if (keyItemsToShow.includes(key)) continue; // 이미 위에서 보여줌
+        if (key === '비밀번호' || key === '상세주소') continue;
+        if (!value || value.trim() === '') continue; // 값이 없으면 건너뜀
+
+        // 너무 긴 항목 잘라서 표시
+        let val = value;
+        if (val.length > 25) val = val.substring(0, 25) + "...";
+        confirmMsg += `- ${key}: ${val}\n`;
+    }
+
+    // 실제로 저장될 항목 개수 세기 (비밀번호, 빈 값 제외)
+    let answerCount = 0;
+    for (const [key, value] of Object.entries(surveyData)) {
+        if (key !== '비밀번호' && key !== '상세주소' && value && value.trim() !== '') {
+            answerCount++;
+        }
+    }
+
+    confirmMsg += `\n위 내용을 포함하여 총 ${answerCount}개의 항목이 제출됩니다.\n내용이 맞으면 [확인]을 눌러주세요.`;
 
     if (!confirm(confirmMsg)) return;
 
     toggleLoading(true);
 
-    // [추가] 학적 자동 설정
+    // [추가] 학번, 이름, 학적 기본 정보 셋팅
+    surveyData['학번'] = currentStudentNum;
+    surveyData['이름'] = displayName.textContent;
     surveyData['학적'] = "재학";
 
     try {
