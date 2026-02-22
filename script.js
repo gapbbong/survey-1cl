@@ -28,6 +28,14 @@ const inputPw = document.getElementById("student-pw");
 const setupPw = document.getElementById("setup-pw");
 const setupPwConfirm = document.getElementById("setup-pw-confirm");
 
+// [추가] 모달 관련 요소
+const confirmModal = document.getElementById("confirm-modal");
+const confirmModalBody = document.getElementById("confirm-modal-body");
+const btnModalCancel = document.getElementById("btn-modal-cancel");
+const btnModalConfirm = document.getElementById("btn-modal-confirm");
+
+let pendingSurveyData = null; // 모달 확인 대기 중인 데이터 저장용
+
 // 로딩 토글
 function toggleLoading(show) {
     loadingOverlay.classList.toggle("hidden", !show);
@@ -652,51 +660,70 @@ surveyForm.addEventListener("submit", async (e) => {
         // delete surveyData['상세주소']; // 상세주소 컬럼이 시트에 있다면 삭제하지 않고 같이 보냄
     }
 
-    // 최종 확인용 메시지 동적 생성
-    let confirmMsg = `입력하신 정보를 최종 확인해주세요.\n\n`;
+    // [추가] 학번, 이름, 학적 기본 정보 셋팅
+    surveyData['학번'] = currentStudentNum;
+    surveyData['이름'] = displayName.textContent;
+    surveyData['학적'] = "재학";
+
+    // 모달 내용 동적 생성 (HTML)
+    let modalHtml = `<p><strong>[핵심 입력 내용]</strong></p><ul>`;
 
     // 핵심 항목은 상단에 고정
     const keyItemsToShow = ['학생폰', '집주소', '주보호자관계', '주보호자연락처'];
     for (const key of keyItemsToShow) {
         if (surveyData[key]) {
             let val = surveyData[key];
-            if (val.length > 25) val = val.substring(0, 25) + "...";
-            confirmMsg += `▪️ ${key}: ${val}\n`;
+            if (val.length > 30) val = val.substring(0, 30) + "...";
+            modalHtml += `<li><strong>${key}:</strong> ${val}</li>`;
         }
     }
+    modalHtml += `</ul>`;
 
-    confirmMsg += `\n[전체 입력 내용]\n`;
+    modalHtml += `<p style="margin-top:15px;"><strong>[전체 입력 내용]</strong></p><ul>`;
 
     // 나머지 모든 입력 항목 나열 (값이 있는 것만, 비밀번호 제외)
-    for (const [key, value] of Object.entries(surveyData)) {
-        if (keyItemsToShow.includes(key)) continue; // 이미 위에서 보여줌
-        if (key === '비밀번호' || key === '상세주소') continue;
-        if (!value || value.trim() === '') continue; // 값이 없으면 건너뜀
-
-        // 너무 긴 항목 잘라서 표시
-        let val = value;
-        if (val.length > 25) val = val.substring(0, 25) + "...";
-        confirmMsg += `- ${key}: ${val}\n`;
-    }
-
-    // 실제로 저장될 항목 개수 세기 (비밀번호, 빈 값 제외)
     let answerCount = 0;
     for (const [key, value] of Object.entries(surveyData)) {
-        if (key !== '비밀번호' && key !== '상세주소' && value && value.trim() !== '') {
-            answerCount++;
-        }
+        if (key === '비밀번호' || key === '상세주소') continue;
+        if (!value || value.toString().trim() === '') continue; // 값이 없으면 건너뜀
+
+        answerCount++;
+
+        if (keyItemsToShow.includes(key)) continue; // 이미 위에서 보여줌
+
+        // 너무 긴 항목 처리 (HTML 이스케이프 처리는 생략, 안전한 텍스트라고 가정)
+        let val = value;
+        if (val.length > 50) val = val.substring(0, 50) + "...";
+        modalHtml += `<li><strong>${key}:</strong> ${val}</li>`;
     }
+    modalHtml += `</ul>`;
 
-    confirmMsg += `\n위 내용을 포함하여 총 ${answerCount}개의 항목이 제출됩니다.\n내용이 맞으면 [확인]을 눌러주세요.`;
+    modalHtml += `<div style="margin-top:15px; padding:10px; background:#e3f2fd; border-radius:8px; text-align:center; font-weight:bold; color:#1565c0;">
+        총 ${answerCount}개의 항목이 제출됩니다.<br>내용이 맞으면 아래 버튼을 눌러주세요.
+    </div>`;
 
-    if (!confirm(confirmMsg)) return;
+    // 모달에 내용 넣기
+    confirmModalBody.innerHTML = modalHtml;
 
+    // 글로벌 변수에 대기 중인 데이터 저장
+    pendingSurveyData = surveyData;
+
+    // 모달 띄우기
+    confirmModal.classList.remove("hidden");
+});
+
+// 모달 '취소' 버튼 클릭 시
+btnModalCancel.addEventListener("click", () => {
+    confirmModal.classList.add("hidden");
+    pendingSurveyData = null;
+});
+
+// 모달 '확인(제출)' 버튼 클릭 시 (실제 Supabase 저장 로직)
+btnModalConfirm.addEventListener("click", async () => {
+    if (!pendingSurveyData) return;
+
+    confirmModal.classList.add("hidden");
     toggleLoading(true);
-
-    // [추가] 학번, 이름, 학적 기본 정보 셋팅
-    surveyData['학번'] = currentStudentNum;
-    surveyData['이름'] = displayName.textContent;
-    surveyData['학적'] = "재학";
 
     try {
         // [수정] Supabase surveys 테이블에 데이터 저장
@@ -705,19 +732,18 @@ surveyForm.addEventListener("submit", async (e) => {
             .insert([
                 {
                     student_pid: currentStudentPid,
-                    data: surveyData
+                    data: pendingSurveyData
                 }
             ]);
 
-        // (옵션) students 마스터 테이블의 일부 공통 정보도 업데이트 할 수 있습니다. 
-        // 예: 연락처, 주소, 인스타ID
+        // (옵션) students 마스터 테이블 정보 업데이트
         await supabase
             .from('students')
             .update({
-                contact: surveyData['학생폰'],
-                parent_contact: surveyData['주보호자연락처'],
-                address: surveyData['집주소'],
-                instagram_id: surveyData['인스타 id']
+                contact: pendingSurveyData['학생폰'],
+                parent_contact: pendingSurveyData['주보호자연락처'],
+                address: pendingSurveyData['집주소'],
+                instagram_id: pendingSurveyData['인스타 id']
             })
             .eq('pid', currentStudentPid);
 
@@ -739,5 +765,6 @@ surveyForm.addEventListener("submit", async (e) => {
         alert(`[시스템 오류]\n서버와 통신하거나 데이터를 저장하는 중 문제가 발생했습니다.\n상세: ${networkReason}\n\n(입력한 내용은 폰에 저장되어 있으니, 와이파이나 데이터를 확인 후 새로고침해서 다시 시도하거나 선생님께 문의해주세요.)`);
     } finally {
         toggleLoading(false);
+        pendingSurveyData = null;
     }
 });

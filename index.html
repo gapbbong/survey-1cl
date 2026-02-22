@@ -526,6 +526,22 @@
         <p>처리 중입니다...</p>
     </div>
 
+    <!-- [추가] 최종 제출 확인 모달 -->
+    <div id="confirm-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>📝 제출 전 최종 확인</h3>
+            </div>
+            <div class="modal-body" id="confirm-modal-body">
+                <!-- 동적으로 내용이 채워짐 -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" id="btn-modal-cancel" class="cancel-btn">뒤로 가기</button>
+                <button type="button" id="btn-modal-confirm" class="primary-btn">최종 제출하기 🚀</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="./script.js"></script>
 </body>
 
