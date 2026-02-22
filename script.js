@@ -1,9 +1,9 @@
 // ✅ Student Survey App JS (v3)
 
-// [중요] 실제 서비스 시에는 선생님의 GAS SCRIPT_URL로 교체 완료해야 함
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyfadmRNyOpRww3m13PVnx_E_6ft9gzrqleOx2q_8X9WXFpom31vYpgjzZg9MK01hcZ3Q/exec";
+import { supabase } from './supabase.js';
 
 let currentStudentNum = null; // 초기화
+let currentStudentPid = null; // Supabase의 고유 ID (PID) 저장용
 
 // DOM 요소
 const stepVerify = document.getElementById("step-verify");
@@ -127,54 +127,75 @@ btnVerify.addEventListener("click", async () => {
 
     toggleLoading(true);
     try {
-        let url = `${SCRIPT_URL}?action=verifyStudent&num=${num}`;
-        if (isPwStage && pw) {
-            url += `&pw=${encodeURIComponent(pw)}`;
+        // 1. Supabase에서 학번으로 학생 찾기
+        const { data: studentData, error: studentError } = await supabase
+            .from('students')
+            .select('*')
+            .eq('student_id', num)
+            .single();
+
+        if (studentError || !studentData) {
+            console.error("Student Fetch Error:", studentError);
+            let fetchReason = "알 수 없는 오류";
+            if (studentError && studentError.code === 'PGRST116') fetchReason = "해당 학번으로 등록된 학생이 없습니다.";
+            else if (studentError) fetchReason = `데이터베이스 오류 (${studentError.code})`;
+
+            alert(`[학번 조회 실패]\n입력하신 학번(${num})을 찾을 수 없습니다.\n사유: ${fetchReason}\n\n학번을 다시 확인해주세요!`);
+            verifyResult.classList.add("hidden");
+            toggleLoading(false);
+            return;
         }
 
-        const response = await fetch(url);
-        const data = await response.json();
+        // 해당 학생의 기존 설문 데이터가 있는지 확인 (비밀번호 체크용)
+        const { data: surveyData, error: surveyError } = await supabase
+            .from('surveys')
+            .select('data')
+            .eq('student_pid', studentData.pid)
+            .order('submitted_at', { ascending: false })
+            .limit(1);
 
-        if (data.success) {
-            if (data.hasPassword) {
-                if (!isPwStage) {
-                    // 1단계: 비밀번호가 있음 -> 입력창 보여주기
-                    pwVerifyGroup.classList.remove("hidden");
-                    btnVerify.textContent = "비밀번호 확인";
-                    alert("이전에 설정한 비밀번호를 입력해주세요.");
+        const latestSurvey = surveyData && surveyData.length > 0 ? surveyData[0].data : null;
+        const hasPassword = latestSurvey && latestSurvey['비밀번호'];
+
+        if (hasPassword) {
+            if (!isPwStage) {
+                // 1단계: 비밀번호가 있음 -> 입력창 보여주기
+                pwVerifyGroup.classList.remove("hidden");
+                btnVerify.textContent = "비밀번호 확인";
+                alert("이전에 설정한 비밀번호를 입력해주세요.");
+                toggleLoading(false);
+                return;
+            } else {
+                // 2단계: 비밀번호 검증 결과 확인
+                if (latestSurvey['비밀번호'] !== pw) {
+                    alert("비밀번호가 올바르지 않습니다.");
+                    toggleLoading(false);
                     return;
-                } else {
-                    // 2단계: 비밀번호 검증 결과 확인
-                    if (!data.isPasswordCorrect) {
-                        alert("비밀번호가 올바르지 않습니다.");
-                        return;
-                    }
                 }
             }
+        }
 
-            // 본인 확인 성공 (비밀번호가 없거나, 비밀번호가 맞거나)
-            displayName.textContent = data.name;
-            verifyResult.classList.remove("hidden");
-            currentStudentNum = num;
+        // 본인 확인 성공 (비밀번호가 없거나, 비밀번호가 맞거나)
+        displayName.textContent = studentData.name;
+        verifyResult.classList.remove("hidden");
+        currentStudentNum = num;
+        currentStudentPid = studentData.pid; // PID 매핑 저장
 
-            // 비밀번호가 이미 있으면 설문지의 '비밀번호 설정' 칸은 현재 입력한 값으로 채우고 숨기거나 안내
-            if (data.hasPassword && setupPw) {
-                setupPw.value = pw;
-                setupPwConfirm.value = pw;
-                // 이미 설정된 비밀번호라고 안내 (선택사항)
-                const pwSection = setupPw.closest(".form-section");
-                if (pwSection) {
-                    const h3 = pwSection.querySelector("h3");
-                    if (h3) h3.textContent += " (인증됨)";
-                }
+        // 비밀번호가 이미 있으면 설문지의 '비밀번호 설정' 칸은 현재 입력한 값으로 채우고 숨기거나 안내
+        if (hasPassword && setupPw) {
+            setupPw.value = pw;
+            setupPwConfirm.value = pw;
+            // 이미 설정된 비밀번호라고 안내 (선택사항)
+            const pwSection = setupPw.closest(".form-section");
+            if (pwSection) {
+                const h3 = pwSection.querySelector("h3");
+                if (h3 && !h3.textContent.includes("인증됨")) h3.textContent += " (인증됨)";
             }
-        } else {
-            alert(data.message || "입력하신 학번의 학생을 찾을 수 없습니다.");
-            verifyResult.classList.add("hidden");
         }
     } catch (err) {
-        console.error(err);
-        alert("서버 통신 중 오류가 발생했습니다.");
+        console.error("Verify Network/Unexpected Error:", err);
+        let networkReason = err.message || "원인을 알 수 없음";
+        alert(`[시스템 오류 - 학번 조회]\n서버와 통신하는 중 문제가 발생했습니다.\n상세: ${networkReason}\n\n(학교 와이파이나 인터넷 데이터 연결을 확인한 뒤 다시 '조회' 버튼을 눌러주세요. 계속 안되면 선생님께 문의해주세요.)`);
     } finally {
         toggleLoading(false);
     }
@@ -494,6 +515,18 @@ function loadFromLocal() {
         const savedNum = localStorage.getItem("current_student_num");
         if (savedNum && savedNum !== "null") {
             currentStudentNum = savedNum;
+            // 잠시 기다렸다가 supabase 정보까지 불러오기 위해 비동기로 호출
+            (async () => {
+                const { data: studentData } = await supabase
+                    .from('students')
+                    .select('pid')
+                    .eq('student_id', savedNum)
+                    .single();
+                if (studentData) {
+                    currentStudentPid = studentData.pid;
+                }
+            })();
+
             // 만약 학번이 있다면 조회 단계를 건너뛰고 설문지로 바로 가도록 처리 (선택사항)
             stepVerify.classList.add("hidden");
             stepSurvey.classList.remove("hidden");
@@ -634,38 +667,48 @@ surveyForm.addEventListener("submit", async (e) => {
         // delete surveyData['상세주소']; // 상세주소 컬럼이 시트에 있다면 삭제하지 않고 같이 보냄
     }
 
-    // POST 요청용 FormData
-    const postData = new FormData();
-    postData.append("action", "updateStudentInfo");
-    postData.append("num", currentStudentNum);
-
     // [추가] 학적 자동 설정
     surveyData['학적'] = "재학";
 
-    postData.append("surveyData", JSON.stringify(surveyData));
-
     try {
-        const response = await fetch(SCRIPT_URL, {
-            method: "POST",
-            body: postData
-        });
-        const result = await response.json();
+        // [수정] Supabase surveys 테이블에 데이터 저장
+        const { error } = await supabase
+            .from('surveys')
+            .insert([
+                {
+                    student_pid: currentStudentPid,
+                    data: surveyData
+                }
+            ]);
 
-        if (result.result === "success") {
+        // (옵션) students 마스터 테이블의 일부 공통 정보도 업데이트 할 수 있습니다. 
+        // 예: 연락처, 주소, 인스타ID
+        await supabase
+            .from('students')
+            .update({
+                contact: surveyData['학생폰'],
+                parent_contact: surveyData['주보호자연락처'],
+                address: surveyData['집주소'],
+                instagram_id: surveyData['인스타 id']
+            })
+            .eq('pid', currentStudentPid);
+
+        if (!error) {
             stepSurvey.classList.add("hidden");
             stepDone.classList.remove("hidden");
             window.scrollTo(0, 0);
-
-            // [수정] 제출 성공 시에도 LocalStorage 데이터 유지 (사용자 요청)
-            // localStorage.removeItem(STORAGE_KEY); 
-            // alert("제출이 완료되었습니다. 내용은 브라우저에 임시 저장되어 있습니다.");
-
         } else {
-            alert("제출에 실패했습니다: " + (result.message || "알 수 없는 오류"));
+            console.error("Supabase Error:", error);
+            let errorReason = "알 수 없는 데이터베이스 오류";
+            if (error.code === '23505') errorReason = "이미 설문을 제출한 학번이거나 중복된 데이터입니다.";
+            else if (error.code === '42P01') errorReason = "데이터베이스 테이블(surveys)을 찾을 수 없습니다.";
+            else if (error.code === '23503') errorReason = "학생 정보(pid)가 마스터 테이블과 일치하지 않습니다.";
+            alert(`[오류 코드: ${error.code}]\n제출에 실패했습니다.\n사유: ${errorReason}\n선생님께 이 화면(오류 코드)을 보여주세요.`);
         }
     } catch (err) {
-        console.error(err);
-        alert("서버 저장 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요.\n(입력한 내용은 저장되어 있으니 새로고침 하셔도 됩니다)");
+        console.error("Network/Unexpected Error:", err);
+        let networkReason = err.message || "원인을 알 수 없음";
+        alert(`[시스템 오류]\n서버와 통신하거나 데이터를 저장하는 중 문제가 발생했습니다.\n상세: ${networkReason}\n\n(입력한 내용은 폰에 저장되어 있으니, 와이파이나 데이터를 확인 후 새로고침해서 다시 시도하거나 선생님께 문의해주세요.)`);
     } finally {
         toggleLoading(false);
     }
